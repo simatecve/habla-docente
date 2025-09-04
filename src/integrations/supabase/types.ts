@@ -285,6 +285,145 @@ export type Database = {
           },
         ]
       }
+      webhooks: {
+        Row: {
+          id: string
+          agent_id: string
+          user_id: string
+          name: string
+          url: string
+          secret_key: string | null
+          is_active: boolean
+          events: string[]
+          headers: Json
+          retry_attempts: number
+          timeout_seconds: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          user_id: string
+          name: string
+          url: string
+          secret_key?: string | null
+          is_active?: boolean
+          events?: string[]
+          headers?: Json
+          retry_attempts?: number
+          timeout_seconds?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          user_id?: string
+          name?: string
+          url?: string
+          secret_key?: string | null
+          is_active?: boolean
+          events?: string[]
+          headers?: Json
+          retry_attempts?: number
+          timeout_seconds?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_logs: {
+        Row: {
+          id: string
+          webhook_id: string
+          event_type: string
+          payload: Json
+          response_status: number | null
+          response_body: string | null
+          error_message: string | null
+          attempt_number: number
+          executed_at: string
+        }
+        Insert: {
+          id?: string
+          webhook_id: string
+          event_type: string
+          payload: Json
+          response_status?: number | null
+          response_body?: string | null
+          error_message?: string | null
+          attempt_number?: number
+          executed_at?: string
+        }
+        Update: {
+          id?: string
+          webhook_id?: string
+          event_type?: string
+          payload?: Json
+          response_status?: number | null
+          response_body?: string | null
+          error_message?: string | null
+          attempt_number?: number
+          executed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          key_hash: string
+          key_prefix: string
+          permissions: string[]
+          is_active: boolean
+          last_used_at: string | null
+          expires_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          key_hash: string
+          key_prefix: string
+          permissions?: string[]
+          is_active?: boolean
+          last_used_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          key_hash?: string
+          key_prefix?: string
+          permissions?: string[]
+          is_active?: boolean
+          last_used_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

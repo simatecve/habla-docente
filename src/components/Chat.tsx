@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,10 +44,12 @@ interface ChatProps {
 const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  const [agentId, setAgentId] = useState(initialAgentId || '');
+  const urlAgentId = searchParams.get('agentId');
+  const [agentId, setAgentId] = useState(urlAgentId || initialAgentId || '');
   const [agent, setAgent] = useState<Agent | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -64,6 +67,14 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Update agentId when URL parameter changes
+  useEffect(() => {
+    const urlAgentId = searchParams.get('agente');
+    if (urlAgentId && urlAgentId !== agentId) {
+      setAgentId(urlAgentId);
+    }
+  }, [searchParams]);
 
   // Load agent info when agentId changes
   useEffect(() => {
@@ -178,6 +189,24 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
     }
   };
 
+  // Función para formatear la respuesta del webhook
+  const formatWebhookResponse = (text: string): string => {
+    if (!text) return '';
+    
+    return text
+      // Convertir **texto** a negritas
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Convertir saltos de línea dobles a párrafos
+      .replace(/\n\n/g, '</p><p>')
+      // Convertir saltos de línea simples a <br>
+      .replace(/\n/g, '<br>')
+      // Envolver en párrafos si no está ya envuelto
+      .replace(/^(?!<p>)/, '<p>')
+      .replace(/(?!<\/p>)$/, '</p>')
+      // Limpiar párrafos vacíos
+      .replace(/<p><\/p>/g, '');
+  };
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || !agent || !conversationId || isLoading) return;
 
@@ -205,45 +234,77 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
           contenido: userMessage.content
         });
 
-      // Simulate AI response (replace with actual AI integration)
-      setTimeout(async () => {
-        const aiResponse = `Esta es una respuesta simulada del agente "${agent.nombre}" para el mensaje: "${userMessage.content}". En una implementación real, aquí se integraría con OpenAI o el servicio de IA correspondiente.`;
-        
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: aiResponse,
-          role: 'assistant',
-          timestamp: new Date(),
-          agentId: agent.id
-        };
+      // Enviar mensaje al webhook
+      const webhookUrl = 'https://app-zuenvio.aykjp9.easypanel.host/webhook/e62ad48e-ed56-4d16-8429-56418fb0e873/chat';
+      
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          agentId: agent.id,
+          agentName: agent.nombre,
+          userId: user?.id
+        })
+      });
 
-        setMessages(prev => [...prev, aiMessage]);
-        setIsTyping(false);
-        setIsLoading(false);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-        // Save AI message
-        await supabase
-          .from('mensajes')
-          .insert({
-            conversacion_id: conversationId,
-            user_id: user?.id,
-            rol: 'asistente',
-            contenido: aiMessage.content
-          });
+      const webhookData = await response.json();
+      const aiResponse = webhookData.output || webhookData.response || webhookData.message || 'No se recibió respuesta del webhook';
+      
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: formatWebhookResponse(aiResponse),
+        role: 'assistant',
+        timestamp: new Date(),
+        agentId: agent.id
+      };
 
-      }, 1500 + Math.random() * 1000);
+      setMessages(prev => [...prev, aiMessage]);
+      setIsTyping(false);
+      setIsLoading(false);
+
+      // Save AI message
+      await supabase
+        .from('mensajes')
+        .insert({
+          conversacion_id: conversationId,
+          user_id: user?.id,
+          rol: 'asistente',
+          contenido: aiMessage.content
+        });
       
     } catch (error) {
       console.error('Error sending message:', error);
       setIsLoading(false);
       setIsTyping(false);
+      
+      // Mostrar mensaje de error más específico
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      
       toast({
         title: "Error",
-        description: "No se pudo enviar el mensaje",
+        description: `No se pudo enviar el mensaje: ${errorMessage}`,
         variant: "destructive",
       });
-    }
-  };
+      
+      // Agregar mensaje de error en el chat
+      const errorMsg: Message = {
+        id: (Date.now() + 2).toString(),
+        content: `Error: No se pudo conectar con el webhook. ${errorMessage}`,
+        role: 'assistant',
+        timestamp: new Date(),
+        agentId: agent.id
+      };
+      
+      setMessages(prev => [...prev, errorMsg]);
+     }
+   };
 
   const copyMessage = async (content: string) => {
     try {
@@ -304,30 +365,47 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
       {/* Header */}
       <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-b border-white/20 shadow-lg">
         <div className="max-w-4xl mx-auto p-4">
-          {/* Agent ID Input */}
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Ingresa el ID del agente..."
-                  value={agentId}
-                  onChange={(e) => handleAgentIdChange(e.target.value)}
-                  className="pl-10 bg-white/70 dark:bg-gray-800/70 border-white/30 focus:border-purple-400 focus:ring-purple-200"
-                />
+          {/* Agent ID Input - Solo mostrar si no viene desde URL */}
+          {!searchParams.get('agente') && (
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Ingresa el ID del agente..."
+                    value={agentId}
+                    onChange={(e) => handleAgentIdChange(e.target.value)}
+                    className="pl-10 bg-white/70 dark:bg-gray-800/70 border-white/30 focus:border-purple-400 focus:ring-purple-200"
+                  />
+                </div>
               </div>
+              {messages.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearConversation}
+                  className="bg-white/70 hover:bg-red-50 border-white/30 hover:border-red-200"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-            {messages.length > 0 && (
+          )}
+          
+          {/* Botón de limpiar conversación cuando viene desde URL */}
+          {searchParams.get('agente') && messages.length > 0 && (
+            <div className="flex justify-end mb-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={clearConversation}
                 className="bg-white/70 hover:bg-red-50 border-white/30 hover:border-red-200"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4 mr-2" />
+                Limpiar conversación
               </Button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Agent Info Header */}
           {loadingAgent ? (
@@ -416,9 +494,10 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
                         ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-br-md'
                         : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-bl-md'
                     }`}>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {message.content}
-                      </p>
+                      <div 
+                        className="text-sm leading-relaxed whitespace-pre-wrap"
+                        dangerouslySetInnerHTML={{ __html: message.content }}
+                      />
                       
                       <Button
                         variant="ghost"

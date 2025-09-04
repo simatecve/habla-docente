@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import TextSnippets from '@/components/TextSnippets';
+
 import { 
   ArrowLeft, 
   Bot, 
@@ -18,8 +20,7 @@ import {
   Loader2,
   AlertCircle,
   Edit,
-  Trash2,
-  Play
+  Trash2
 } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 
@@ -226,13 +227,9 @@ const AgentDetail: React.FC = () => {
               Chatear
             </Button>
             
-            <Button 
-              onClick={() => navigate(`/agentes/${agente.id}/playground`)}
-              className="flex items-center gap-2"
-            >
-              <Play className="h-4 w-4" />
-              Playground
-            </Button>
+
+            
+
             
             <Button 
               variant="outline"
@@ -264,33 +261,45 @@ const AgentDetail: React.FC = () => {
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Columna principal */}
         <div className="lg:col-span-2 space-y-8">
-          {/* Descripción */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Descripción
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {agente.descripcion ? (
-                <p className="text-muted-foreground leading-relaxed">
-                  {agente.descripcion}
-                </p>
-              ) : (
-                <p className="text-muted-foreground italic">
-                  Este agente no tiene descripción.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="overview">Información</TabsTrigger>
+              <TabsTrigger value="snippets">Snippets</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="overview" className="space-y-6">
+              {/* Descripción */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Descripción
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {agente.descripcion ? (
+                    <p className="text-muted-foreground leading-relaxed">
+                      {agente.descripcion}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground italic">
+                      Este agente no tiene descripción.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="snippets">
+              <Card>
+                <CardContent className="p-6">
+                  <TextSnippets agenteId={agente.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
 
-          {/* Text Snippets */}
-          <Card>
-            <CardContent className="p-6">
-              <TextSnippets agenteId={agente.id} />
-            </CardContent>
-          </Card>
+          </Tabs>
         </div>
 
         {/* Sidebar con información adicional */}

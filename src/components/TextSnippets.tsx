@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+
 import { 
   Plus, 
   Edit3, 
@@ -115,6 +116,8 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({ agenteId }) => {
       setNewSnippet({ titulo: '', descripcion: '' });
       setIsCreating(false);
       
+
+      
       toast({
         title: "Éxito",
         description: "Snippet creado correctamente",
@@ -165,6 +168,8 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({ agenteId }) => {
       ));
       setEditingSnippet(null);
       
+
+      
       toast({
         title: "Éxito",
         description: "Snippet actualizado correctamente",
@@ -199,6 +204,8 @@ export const TextSnippets: React.FC<TextSnippetsProps> = ({ agenteId }) => {
       if (error) throw error;
 
       setSnippets(prev => prev.filter(snippet => snippet.id !== id));
+      
+
       
       toast({
         title: "Éxito",
