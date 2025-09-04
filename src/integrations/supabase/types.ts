@@ -247,6 +247,44 @@ export type Database = {
         }
         Relationships: []
       }
+      snippets: {
+        Row: {
+          agente_id: string
+          created_at: string
+          descripcion: string
+          id: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agente_id: string
+          created_at?: string
+          descripcion: string
+          id?: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agente_id?: string
+          created_at?: string
+          descripcion?: string
+          id?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snippets_agente_id_fkey"
+            columns: ["agente_id"]
+            isOneToOne: false
+            referencedRelation: "agentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
