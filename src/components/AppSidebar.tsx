@@ -38,6 +38,11 @@ const AppSidebar: React.FC = () => {
       path: '/dashboard',
     },
     {
+      title: 'Mis Agentes',
+      icon: Bot,
+      path: '/agentes',
+    },
+    {
       title: 'Crear Agente',
       icon: Plus,
       path: '/agentes/nuevo',

@@ -13,6 +13,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import CreateAgentPage from "./pages/CreateAgent";
 import AgentDetail from "./pages/AgentDetail";
+import EditAgentPage from "./pages/EditAgent";
+import AgentsMenuPage from "./pages/AgentsMenu";
 
 import Chat from "./components/Chat";
 import NotFound from "./pages/NotFound";
@@ -54,11 +56,19 @@ const Header: React.FC = () => {
     switch (location.pathname) {
       case '/dashboard':
         return 'Dashboard';
+      case '/agentes':
+        return 'Mis Agentes';
       case '/agentes/nuevo':
         return 'Crear Agente';
       case '/chat':
         return 'Chat';
       default:
+        if (location.pathname.includes('/agentes/') && location.pathname.includes('/editar')) {
+          return 'Editar Agente';
+        }
+        if (location.pathname.includes('/agentes/')) {
+          return 'Detalle del Agente';
+        }
         return 'Koonetxa Chats';
     }
   };
@@ -68,9 +78,13 @@ const Header: React.FC = () => {
     const breadcrumbs = [{ name: 'Inicio', path: '/dashboard' }];
     
     if (paths.includes('agentes')) {
-      breadcrumbs.push({ name: 'Agentes', path: '/dashboard' });
+      breadcrumbs.push({ name: 'Agentes', path: '/agentes' });
       if (paths.includes('nuevo')) {
         breadcrumbs.push({ name: 'Crear Agente', path: '/agentes/nuevo' });
+      } else if (paths.includes('editar')) {
+        breadcrumbs.push({ name: 'Editar Agente', path: location.pathname });
+      } else if (paths.length > 1) {
+        breadcrumbs.push({ name: 'Detalle', path: location.pathname });
       }
     }
     
@@ -229,8 +243,10 @@ const App = () => (
                 <Route path="/landing" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/agentes" element={<AgentsMenuPage />} />
                 <Route path="/agentes/nuevo" element={<CreateAgentPage />} />
                 <Route path="/agentes/:id" element={<AgentDetail />} />
+                <Route path="/agentes/:id/editar" element={<EditAgentPage />} />
 
                 <Route path="/chat" element={<ChatPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
