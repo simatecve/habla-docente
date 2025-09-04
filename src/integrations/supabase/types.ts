@@ -14,7 +14,239 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agentes: {
+        Row: {
+          created_at: string
+          descripcion: string | null
+          estado: string | null
+          id: string
+          nombre: string
+          openai_api_key: string | null
+          tokens_utilizados: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descripcion?: string | null
+          estado?: string | null
+          id?: string
+          nombre: string
+          openai_api_key?: string | null
+          tokens_utilizados?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descripcion?: string | null
+          estado?: string | null
+          id?: string
+          nombre?: string
+          openai_api_key?: string | null
+          tokens_utilizados?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      conversaciones: {
+        Row: {
+          agente_id: string
+          created_at: string
+          id: string
+          titulo: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agente_id: string
+          created_at?: string
+          id?: string
+          titulo?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agente_id?: string
+          created_at?: string
+          id?: string
+          titulo?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversaciones_agente_id_fkey"
+            columns: ["agente_id"]
+            isOneToOne: false
+            referencedRelation: "agentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentos: {
+        Row: {
+          agente_id: string
+          archivo_url: string | null
+          contenido_extraido: string | null
+          created_at: string
+          estado_procesamiento: string | null
+          id: string
+          nombre: string
+          tamano_archivo: number | null
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agente_id: string
+          archivo_url?: string | null
+          contenido_extraido?: string | null
+          created_at?: string
+          estado_procesamiento?: string | null
+          id?: string
+          nombre: string
+          tamano_archivo?: number | null
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agente_id?: string
+          archivo_url?: string | null
+          contenido_extraido?: string | null
+          created_at?: string
+          estado_procesamiento?: string | null
+          id?: string
+          nombre?: string
+          tamano_archivo?: number | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_agente_id_fkey"
+            columns: ["agente_id"]
+            isOneToOne: false
+            referencedRelation: "agentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integraciones_n8n: {
+        Row: {
+          agente_id: string
+          created_at: string
+          estado: string | null
+          eventos: string[] | null
+          id: string
+          updated_at: string
+          user_id: string
+          webhook_url: string | null
+        }
+        Insert: {
+          agente_id: string
+          created_at?: string
+          estado?: string | null
+          eventos?: string[] | null
+          id?: string
+          updated_at?: string
+          user_id: string
+          webhook_url?: string | null
+        }
+        Update: {
+          agente_id?: string
+          created_at?: string
+          estado?: string | null
+          eventos?: string[] | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integraciones_n8n_agente_id_fkey"
+            columns: ["agente_id"]
+            isOneToOne: false
+            referencedRelation: "agentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensajes: {
+        Row: {
+          contenido: string
+          conversacion_id: string
+          created_at: string
+          id: string
+          rol: string
+          tokens_utilizados: number | null
+          user_id: string
+        }
+        Insert: {
+          contenido: string
+          conversacion_id: string
+          created_at?: string
+          id?: string
+          rol: string
+          tokens_utilizados?: number | null
+          user_id: string
+        }
+        Update: {
+          contenido?: string
+          conversacion_id?: string
+          created_at?: string
+          id?: string
+          rol?: string
+          tokens_utilizados?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensajes_conversacion_id_fkey"
+            columns: ["conversacion_id"]
+            isOneToOne: false
+            referencedRelation: "conversaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nombre: string | null
+          plan: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nombre?: string | null
+          plan?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nombre?: string | null
+          plan?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
