@@ -89,7 +89,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">HablaDocente</CardTitle>
+          <CardTitle className="text-2xl font-bold">Koonetxa Chats</CardTitle>
           <CardDescription>
             Plataforma SaaS para crear agentes de IA personalizados
           </CardDescription>

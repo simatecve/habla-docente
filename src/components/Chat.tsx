@@ -18,7 +18,9 @@ import {
   MessageSquare,
   CheckCircle,
   AlertCircle,
-  Search
+  Search,
+  Plus,
+  MessageCircle
 } from 'lucide-react';
 
 interface Message {
@@ -165,7 +167,7 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
       const formattedMessages: Message[] = messages.map(msg => ({
         id: msg.id,
         content: msg.contenido,
-        role: msg.rol as 'user' | 'assistant',
+        role: msg.rol === 'usuario' ? 'user' : 'assistant',
         timestamp: new Date(msg.created_at),
         agentId: agentId
       }));
@@ -346,6 +348,39 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
     }
   };
 
+  const createNewConversation = async () => {
+    if (!agent || !user) return;
+
+    try {
+      const { data: newConv, error } = await supabase
+        .from('conversaciones')
+        .insert({
+          agente_id: agent.id,
+          user_id: user.id,
+          titulo: `Nueva conversación - ${new Date().toLocaleDateString()}`
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setConversationId(newConv.id);
+      setMessages([]);
+      
+      toast({
+        title: "Nueva conversación",
+        description: "Se ha creado una nueva conversación",
+      });
+    } catch (error) {
+      console.error('Error creating new conversation:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear una nueva conversación",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -361,10 +396,10 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-b border-white/20 shadow-lg">
-        <div className="max-w-4xl mx-auto p-4">
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="p-4">
           {/* Agent ID Input - Solo mostrar si no viene desde URL */}
           {!searchParams.get('agente') && (
             <div className="flex items-center space-x-4 mb-4">
@@ -375,75 +410,98 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
                     placeholder="Ingresa el ID del agente..."
                     value={agentId}
                     onChange={(e) => handleAgentIdChange(e.target.value)}
-                    className="pl-10 bg-white/70 dark:bg-gray-800/70 border-white/30 focus:border-purple-400 focus:ring-purple-200"
+                    className="pl-10"
                   />
                 </div>
               </div>
+              <div className="flex space-x-2">
+                {agent && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={createNewConversation}
+                    className="hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-105 hover:shadow-md border-2 hover:border-primary/30"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
+                {messages.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearConversation}
+                    className="hover:bg-destructive/10 hover:text-destructive transition-all duration-200 hover:scale-105 hover:shadow-md border-2 hover:border-destructive/30"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Botones de acción cuando viene desde URL */}
+          {searchParams.get('agente') && agent && (
+            <div className="flex justify-end mb-4 space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={createNewConversation}
+                className="hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-105 hover:shadow-md border-2 hover:border-primary/30"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva conversación
+              </Button>
               {messages.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={clearConversation}
-                  className="bg-white/70 hover:bg-red-50 border-white/30 hover:border-red-200"
+                  className="hover:bg-destructive/10 hover:text-destructive transition-all duration-200 hover:scale-105 hover:shadow-md border-2 hover:border-destructive/30"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Limpiar conversación
                 </Button>
               )}
-            </div>
-          )}
-          
-          {/* Botón de limpiar conversación cuando viene desde URL */}
-          {searchParams.get('agente') && messages.length > 0 && (
-            <div className="flex justify-end mb-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearConversation}
-                className="bg-white/70 hover:bg-red-50 border-white/30 hover:border-red-200"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Limpiar conversación
-              </Button>
             </div>
           )}
 
           {/* Agent Info Header */}
           {loadingAgent ? (
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-white/50 dark:bg-gray-800/50">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+            <div className="flex items-center space-x-3 p-3 rounded-lg border bg-card">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <div>
-                <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
-                <div className="h-3 bg-gray-200 rounded w-24 animate-pulse"></div>
+                <div className="h-4 bg-muted rounded w-32 mb-2 animate-pulse"></div>
+                <div className="h-3 bg-muted rounded w-24 animate-pulse"></div>
               </div>
             </div>
           ) : agent ? (
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-200/30">
-              <Avatar className="h-10 w-10 bg-gradient-to-r from-purple-500 to-pink-500">
-                <AvatarFallback className="text-white font-semibold">
+            <div className="flex items-center space-x-3 p-4 rounded-xl border-2 bg-gradient-to-r from-card to-card/95 hover:from-card/95 hover:to-muted/10 transition-all duration-200 hover:shadow-md hover:border-border/60">
+              <Avatar className="h-12 w-12 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
                   <Bot className="h-5 w-5" />
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 dark:text-white">{agent.nombre}</h3>
+                <h3 className="font-semibold">{agent.nombre}</h3>
                 <p className="text-sm text-muted-foreground">
                   {agent.descripcion || 'Agente de IA personalizado'}
                 </p>
               </div>
               <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                 agent.estado === 'activo'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                  : 'bg-muted text-muted-foreground'
               }`}>
                 {agent.estado}
               </div>
             </div>
           ) : error ? (
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              <span className="text-red-700 dark:text-red-300">{error}</span>
+            <div className="flex items-center space-x-3 p-3 rounded-lg border bg-destructive/10 border-destructive/20">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              <span className="text-destructive">{error}</span>
             </div>
           ) : (
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200/50">
+            <div className="flex items-center space-x-3 p-3 rounded-lg border bg-muted/50">
               <MessageSquare className="h-5 w-5 text-muted-foreground" />
               <span className="text-muted-foreground">Ingresa un ID de agente para comenzar</span>
             </div>
@@ -453,14 +511,14 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full max-w-4xl mx-auto p-4">
-          <div className="h-full overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-purple-200 scrollbar-track-transparent">
+        <div className="h-full p-4">
+          <div className="h-full overflow-y-auto overflow-x-hidden space-y-4">
             {messages.length === 0 && agent ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <div className="p-6 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 mb-4">
-                  <MessageSquare className="h-12 w-12 text-purple-500" />
+                <div className="p-6 rounded-full bg-muted mb-4">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold mb-2">
                   ¡Comienza una conversación!
                 </h3>
                 <p className="text-muted-foreground max-w-md">
@@ -471,28 +529,35 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
               messages.map((message, index) => (
                 <div
                   key={message.id}
-                  className={`flex items-start space-x-3 animate-in slide-in-from-bottom-2 duration-300 ${
-                    message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                  className={`flex w-full animate-in slide-in-from-bottom-2 duration-300 hover:scale-[1.02] transition-transform ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
                   }`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <Avatar className={`h-8 w-8 flex-shrink-0 ${
-                    message.role === 'user'
-                      ? 'bg-gradient-to-r from-blue-500 to-cyan-500'
-                      : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                  <div className={`flex items-start space-x-3 max-w-[75%] ${
+                    message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
                   }`}>
-                    <AvatarFallback className="text-white text-sm font-semibold">
-                      {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className={`flex-1 max-w-xs sm:max-w-md lg:max-w-lg ${
-                    message.role === 'user' ? 'flex flex-col items-end' : ''
-                  }`}>
-                    <div className={`group relative p-3 rounded-2xl shadow-sm ${
+                    <Avatar className={`h-10 w-10 flex-shrink-0 ring-2 transition-all duration-200 hover-lift ${
+                      message.role === 'user' 
+                        ? 'ring-blue-500/30 hover:ring-blue-500/50' 
+                        : 'ring-purple-500/30 hover:ring-purple-500/50'
+                    }`}>
+                      <AvatarFallback className={`transition-colors duration-200 ${
+                        message.role === 'user' 
+                          ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700' 
+                          : 'bg-gradient-to-br from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700'
+                      }`}>
+                        {message.role === 'user' ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className={`flex flex-col ${
+                      message.role === 'user' ? 'items-end' : 'items-start'
+                    }`}>
+                    <div className={`group relative p-4 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-lg modern-shadow ${
                       message.role === 'user'
-                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-br-md'
-                        : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-bl-md'
+                        ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-br-md hover:from-blue-700 hover:to-purple-700 border border-blue-500/30'
+                        : 'bg-gradient-to-br from-white to-gray-50 text-gray-800 border border-gray-200/80 rounded-bl-md hover:from-gray-50 hover:to-gray-100 hover:border-gray-300/80 dark:from-gray-800 dark:to-gray-900 dark:text-gray-100 dark:border-gray-700/50 dark:hover:from-gray-700 dark:hover:to-gray-800'
                     }`}>
                       <div 
                         className="text-sm leading-relaxed whitespace-pre-wrap"
@@ -503,21 +568,22 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
                         variant="ghost"
                         size="sm"
                         onClick={() => copyMessage(message.content)}
-                        className={`absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+                        className={`absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 ${
                           message.role === 'user'
                             ? 'hover:bg-white/20 text-white/70 hover:text-white'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                            : 'hover:bg-gray-300 text-gray-600 hover:text-gray-800'
                         }`}
                       >
-                        <Copy className="h-3 w-3" />
+                        <Copy className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    
-                    <span className={`text-xs text-muted-foreground mt-1 ${
-                      message.role === 'user' ? 'text-right' : ''
-                    }`}>
-                      {formatTime(message.timestamp)}
-                    </span>
+                      
+                      <span className={`text-xs text-muted-foreground/70 mt-2 transition-colors duration-200 hover:text-muted-foreground ${
+                        message.role === 'user' ? 'text-right' : 'text-left'
+                      }`}>
+                        {formatTime(message.timestamp)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))
@@ -526,16 +592,16 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
             {/* Typing Indicator */}
             {isTyping && (
               <div className="flex items-start space-x-3 animate-in slide-in-from-bottom-2 duration-300">
-                <Avatar className="h-8 w-8 bg-gradient-to-r from-purple-500 to-pink-500">
-                  <AvatarFallback className="text-white text-sm font-semibold">
-                    <Bot className="h-4 w-4" />
+                <Avatar className="h-10 w-10 ring-2 ring-purple-500/30 hover:ring-purple-500/50 transition-all duration-200 hover-lift">
+                  <AvatarFallback className="bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+                    <Bot className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 rounded-2xl rounded-bl-md shadow-sm">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200/80 p-4 rounded-2xl rounded-bl-md shadow-sm hover:shadow-lg transition-all duration-200 modern-shadow dark:from-gray-800 dark:to-gray-900 dark:border-gray-700/50">
+                  <div className="flex space-x-1.5">
+                    <div className="w-2.5 h-2.5 bg-purple-500 rounded-full animate-bounce"></div>
+                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2.5 h-2.5 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
               </div>
@@ -547,8 +613,8 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
       </div>
 
       {/* Input Area */}
-      <div className="sticky bottom-0 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-t border-white/20 shadow-lg">
-        <div className="max-w-4xl mx-auto p-4">
+      <div className="sticky bottom-0 backdrop-blur-md bg-gradient-to-r from-background/95 to-background/90 border-t border-purple-200/30 shadow-lg modern-shadow">
+        <div className="p-4">
           <div className="flex items-end space-x-3">
             <div className="flex-1">
               <Textarea
@@ -558,19 +624,19 @@ const Chat: React.FC<ChatProps> = ({ initialAgentId, onAgentChange }) => {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 disabled={!agent || isLoading}
-                className="min-h-[44px] max-h-32 resize-none bg-white/70 dark:bg-gray-800/70 border-white/30 focus:border-purple-400 focus:ring-purple-200 rounded-2xl"
+                className="min-h-[48px] max-h-32 resize-none rounded-2xl border-2 transition-all duration-200 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 hover:border-purple-300/60 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80 dark:border-gray-600 dark:focus:border-purple-400/50 dark:hover:border-purple-500/40"
                 rows={1}
               />
             </div>
             <Button
               onClick={sendMessage}
               disabled={!inputMessage.trim() || !agent || isLoading}
-              className="h-11 w-11 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100"
+              className="h-12 w-12 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 hover-lift"
             >
               {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" />
               )}
             </Button>
           </div>

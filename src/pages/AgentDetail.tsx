@@ -138,7 +138,7 @@ const AgentDetail: React.FC = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="px-4 py-8">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
@@ -160,7 +160,7 @@ const AgentDetail: React.FC = () => {
 
   if (!agente) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="px-4 py-8">
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>Agente no encontrado</AlertDescription>
@@ -181,7 +181,7 @@ const AgentDetail: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="px-4 py-8">
       {/* Header con navegación */}
       <div className="mb-8">
         <Button 

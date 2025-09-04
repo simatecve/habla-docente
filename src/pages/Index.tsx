@@ -22,7 +22,7 @@ const Index = () => {
       <section className="container mx-auto px-4 py-20 text-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            HablaDocente
+            Koonetxa Chats
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Crea, entrena y gestiona agentes de IA personalizados que interactúan con tus documentos. 
@@ -116,7 +116,7 @@ const Index = () => {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-4">¿Listo para comenzar?</h2>
           <p className="text-muted-foreground mb-8">
-            Únete a HablaDocente y comienza a crear agentes de IA personalizados hoy mismo.
+            Únete a Koonetxa Chats y comienza a crear agentes de IA personalizados hoy mismo.
             Plan gratuito disponible sin compromiso.
           </p>
           <Button size="lg" onClick={() => navigate('/auth')}>
@@ -129,7 +129,7 @@ const Index = () => {
       <footer className="border-t border-border bg-card">
         <div className="container mx-auto px-4 py-8 text-center">
           <p className="text-muted-foreground">
-            © 2025 HablaDocente. Plataforma SaaS para agentes de IA personalizados.
+            © 2025 Koonetxa Chats. Plataforma SaaS para agentes de IA personalizados.
           </p>
         </div>
       </footer>
