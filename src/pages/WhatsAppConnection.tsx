@@ -1,8 +1,8 @@
 import React from 'react';
-import WhatsAppConnection from '@/components/WhatsAppConnection';
+import WhatsAppInstances from '@/components/WhatsAppInstances';
 
 const WhatsAppConnectionPage: React.FC = () => {
-  return <WhatsAppConnection />;
+  return <WhatsAppInstances />;
 };
 
 export default WhatsAppConnectionPage;
