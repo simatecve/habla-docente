@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, QrCode, Phone } from 'lucide-react';
 import QRModal from './QRModal';
+import QRCodeLib from 'qrcode';
 
 const WhatsAppConnection: React.FC = () => {
   const { user } = useAuth();
@@ -226,9 +227,36 @@ const WhatsAppConnection: React.FC = () => {
       }
 
       if (webhookResponse.ok && webhookResult) {
-        // Asumir que la respuesta contiene el código QR
-        setQrCode(webhookResult.qrCode || webhookResult);
-        setShowQRModal(true);
+        // Extraer el valor del QR del array de respuesta
+        let qrValue = '';
+        if (Array.isArray(webhookResult) && webhookResult.length > 0 && webhookResult[0].value) {
+          qrValue = webhookResult[0].value;
+        } else if (typeof webhookResult === 'string') {
+          qrValue = webhookResult;
+        } else if (webhookResult.value) {
+          qrValue = webhookResult.value;
+        }
+
+        if (qrValue) {
+          // Generar imagen QR a partir del valor
+          try {
+            const qrCodeDataURL = await QRCodeLib.toDataURL(qrValue, {
+              width: 256,
+              margin: 2,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            });
+            setQrCode(qrCodeDataURL);
+            setShowQRModal(true);
+          } catch (qrError) {
+            console.error('Error generating QR code:', qrError);
+            throw new Error('Error al generar el código QR');
+          }
+        } else {
+          throw new Error('No se recibió un código QR válido');
+        }
       } else {
         throw new Error('Error al obtener el código QR');
       }
