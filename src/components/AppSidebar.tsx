@@ -25,6 +25,7 @@ import {
   LogOut,
   User,
   Phone,
+  Users,
 } from 'lucide-react';
 
 const AppSidebar: React.FC = () => {
@@ -52,6 +53,16 @@ const AppSidebar: React.FC = () => {
       title: 'WhatsApp',
       icon: Phone,
       path: '/whatsapp',
+    },
+    {
+      title: 'Conversaciones',
+      icon: MessageSquare,
+      path: '/conversaciones',
+    },
+    {
+      title: 'Leads',
+      icon: Users,
+      path: '/leads',
     },
   ];
 

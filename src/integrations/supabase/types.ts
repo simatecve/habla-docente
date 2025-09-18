@@ -85,6 +85,42 @@ export type Database = {
           },
         ]
       }
+      conversaciones_whatsapp: {
+        Row: {
+          created_at: string
+          id: string
+          instancia_id: string
+          lead_id: string
+          no_leidos: number | null
+          ultimo_mensaje: string | null
+          ultimo_mensaje_fecha: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instancia_id: string
+          lead_id: string
+          no_leidos?: number | null
+          ultimo_mensaje?: string | null
+          ultimo_mensaje_fecha?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instancia_id?: string
+          lead_id?: string
+          no_leidos?: number | null
+          ultimo_mensaje?: string | null
+          ultimo_mensaje_fecha?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documentos: {
         Row: {
           agente_id: string
@@ -171,6 +207,36 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          created_at: string
+          id: string
+          nombre: string | null
+          numero_whatsapp: string
+          pushname: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nombre?: string | null
+          numero_whatsapp: string
+          pushname?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nombre?: string | null
+          numero_whatsapp?: string
+          pushname?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mensajes: {
         Row: {
           contenido: string
@@ -208,6 +274,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mensajes_whatsapp: {
+        Row: {
+          conversacion_id: string
+          created_at: string
+          direccion: string
+          id: string
+          instancia_id: string
+          lead_id: string
+          mensaje: string
+          nombre: string | null
+          pushname: string | null
+          tipo_mensaje: string | null
+          url_adjunto: string | null
+          user_id: string
+        }
+        Insert: {
+          conversacion_id: string
+          created_at?: string
+          direccion: string
+          id?: string
+          instancia_id: string
+          lead_id: string
+          mensaje: string
+          nombre?: string | null
+          pushname?: string | null
+          tipo_mensaje?: string | null
+          url_adjunto?: string | null
+          user_id: string
+        }
+        Update: {
+          conversacion_id?: string
+          created_at?: string
+          direccion?: string
+          id?: string
+          instancia_id?: string
+          lead_id?: string
+          mensaje?: string
+          nombre?: string | null
+          pushname?: string | null
+          tipo_mensaje?: string | null
+          url_adjunto?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
