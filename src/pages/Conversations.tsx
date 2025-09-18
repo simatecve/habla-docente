@@ -5,7 +5,7 @@ import ChatWindow from '@/components/ChatWindow';
 interface Conversation {
   id: string;
   lead_id: string;
-  instancia_id: string;
+  instancia_whatsapp: string;
   ultimo_mensaje: string;
   ultimo_mensaje_fecha: string;
   no_leidos: number;

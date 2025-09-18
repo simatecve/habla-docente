@@ -17,7 +17,7 @@ interface Lead {
 interface Conversation {
   id: string;
   lead_id: string;
-  instancia_id: string;
+  instancia_whatsapp: string;
   ultimo_mensaje: string;
   ultimo_mensaje_fecha: string;
   no_leidos: number;
@@ -47,7 +47,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
         .select(`
           id,
           lead_id,
-          instancia_id,
+          instancia_whatsapp,
           ultimo_mensaje,
           ultimo_mensaje_fecha,
           no_leidos,
@@ -65,7 +65,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
       const typedConversations: Conversation[] = (data || []).map(conv => ({
         id: conv.id,
         lead_id: conv.lead_id,
-        instancia_id: conv.instancia_id,
+        instancia_whatsapp: conv.instancia_whatsapp,
         ultimo_mensaje: conv.ultimo_mensaje,
         ultimo_mensaje_fecha: conv.ultimo_mensaje_fecha,
         no_leidos: conv.no_leidos,

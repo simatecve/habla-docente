@@ -25,7 +25,7 @@ interface Lead {
 interface Conversation {
   id: string;
   lead_id: string;
-  instancia_id: string;
+  instancia_whatsapp: string;
   leads: Lead;
 }
 
@@ -105,7 +105,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversation }) => {
           user_id: user.id,
           conversacion_id: conversation.id,
           lead_id: conversation.lead_id,
-          instancia_id: conversation.instancia_id,
+          instanca_nombre: conversation.instancia_whatsapp,
           nombre: conversation.leads.nombre,
           pushname: conversation.leads.pushname,
           mensaje: newMessage,
