@@ -83,7 +83,7 @@ const WhatsAppConnection: React.FC = () => {
             user_id: user.id,
             nombre_instancia: nombreInstancia,
             numero_whatsapp: numeroWhatsapp,
-            estado: 'desconectado',
+            estado: 'pendiente',
             webhook_respuesta: webhookResult
           })
           .select()
