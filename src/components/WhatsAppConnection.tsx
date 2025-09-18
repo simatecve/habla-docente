@@ -73,9 +73,26 @@ const WhatsAppConnection: React.FC = () => {
         body: JSON.stringify(webhookData),
       });
 
-      const webhookResult = await webhookResponse.json();
+      const webhookText = await webhookResponse.text();
+      let webhookResult: any;
+      try {
+        webhookResult = JSON.parse(webhookText);
+      } catch {
+        webhookResult = webhookText;
+      }
+      const getStatus = (r: any): string | null => {
+        if (r == null) return null;
+        if (typeof r === 'string') return r.toLowerCase();
+        if (Array.isArray(r)) return getStatus(r[0]);
+        if (typeof r === 'object') {
+          const s = (r.status ?? r.Status ?? r.state ?? r.STATE);
+          return s ? String(s).toLowerCase() : null;
+        }
+        return null;
+      };
+      const webhookStatus = getStatus(webhookResult);
 
-      if (webhookResponse.ok && Array.isArray(webhookResult) && webhookResult.length > 0 && webhookResult[0].status === 'STARTING') {
+      if (webhookResponse.ok && (webhookStatus === 'starting' || webhookStatus === 'ok')) {
         // Si el webhook responde OK, guardar en la base de datos
         const { data: instancia, error: dbError } = await supabase
           .from('instancias_whatsapp')
