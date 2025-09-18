@@ -89,35 +89,38 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          instancia_id: string
-          lead_id: string
+          instancia_id: string | null
+          instancia_whatsapp: string | null
+          lead_id: string | null
           no_leidos: number | null
           ultimo_mensaje: string | null
           ultimo_mensaje_fecha: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
-          instancia_id: string
-          lead_id: string
+          instancia_id?: string | null
+          instancia_whatsapp?: string | null
+          lead_id?: string | null
           no_leidos?: number | null
           ultimo_mensaje?: string | null
           ultimo_mensaje_fecha?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
-          instancia_id?: string
-          lead_id?: string
+          instancia_id?: string | null
+          instancia_whatsapp?: string | null
+          lead_id?: string | null
           no_leidos?: number | null
           ultimo_mensaje?: string | null
           ultimo_mensaje_fecha?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -211,29 +214,32 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          instancia: string | null
           nombre: string | null
           numero_whatsapp: string
           pushname: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
+          instancia?: string | null
           nombre?: string | null
           numero_whatsapp: string
           pushname?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          instancia?: string | null
           nombre?: string | null
           numero_whatsapp?: string
           pushname?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -281,42 +287,48 @@ export type Database = {
           created_at: string
           direccion: string
           id: string
-          instancia_id: string
-          lead_id: string
+          instanca_nombre: string | null
+          instancia_id: string | null
+          lead_id: string | null
           mensaje: string
           nombre: string | null
+          numero_whatsapp: string | null
           pushname: string | null
           tipo_mensaje: string | null
           url_adjunto: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           conversacion_id: string
           created_at?: string
           direccion: string
           id?: string
-          instancia_id: string
-          lead_id: string
+          instanca_nombre?: string | null
+          instancia_id?: string | null
+          lead_id?: string | null
           mensaje: string
           nombre?: string | null
+          numero_whatsapp?: string | null
           pushname?: string | null
           tipo_mensaje?: string | null
           url_adjunto?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           conversacion_id?: string
           created_at?: string
           direccion?: string
           id?: string
-          instancia_id?: string
-          lead_id?: string
+          instanca_nombre?: string | null
+          instancia_id?: string | null
+          lead_id?: string | null
           mensaje?: string
           nombre?: string | null
+          numero_whatsapp?: string | null
           pushname?: string | null
           tipo_mensaje?: string | null
           url_adjunto?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
