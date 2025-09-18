@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from '@/hooks/use-toast';
-
-interface Lead {
-  nombre: string;
-  pushname: string;
-  numero_whatsapp: string;
-}
+import { Search, MessageCircle, Plus } from 'lucide-react';
 
 interface Conversation {
   id: string;
-  lead_id: string;
-  instancia_whatsapp: string;
-  ultimo_mensaje: string;
-  ultimo_mensaje_fecha: string;
-  no_leidos: number;
-  leads: Lead;
+  instancia_id: string;
+  numero_whatsapp: string;
+  nombre_contacto?: string;
+  pushname?: string;
+  ultimo_mensaje?: string;
+  ultimo_mensaje_fecha?: string;
+  direccion_ultimo_mensaje?: string;
+  mensajes_no_leidos: number;
+  estado: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ConversationsListProps {
@@ -31,62 +27,43 @@ interface ConversationsListProps {
 
 const ConversationsList: React.FC<ConversationsListProps> = ({
   onSelectConversation,
-  selectedConversationId
+  selectedConversationId,
 }) => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const loadConversations = async () => {
-    // Remover filtro de usuario
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Obtener todas las conversaciones sin filtro de usuario
-      const { data: conversationsData, error: conversationsError } = await supabase
+      setLoading(true);
+      setError(null);
+      
+      // Consulta directa a la tabla conversaciones_whatsapp
+      const { data, error } = await supabase
         .from('conversaciones_whatsapp')
         .select('*')
-        .order('ultimo_mensaje_fecha', { ascending: false });
+        .eq('estado', 'activa')
+        .order('ultimo_mensaje_fecha', { ascending: false, nullsFirst: false });
 
-      if (conversationsError) throw conversationsError;
-
-      if (!conversationsData || conversationsData.length === 0) {
+      if (error) {
+        console.error('Error loading conversations:', error);
+        setError('Error al cargar las conversaciones');
         setConversations([]);
         return;
       }
 
-      // Obtener todos los leads sin filtro de usuario
-      const { data: leadsData, error: leadsError } = await supabase
-        .from('leads')
-        .select('*');
-
-      if (leadsError) throw leadsError;
-
-      // Combinar los datos
-      const leadsMap = new Map((leadsData || []).map(lead => [lead.id, lead]));
-      
-      const typedConversations: Conversation[] = conversationsData.map(conv => ({
-        id: conv.id,
-        lead_id: conv.lead_id,
-        instancia_whatsapp: conv.instancia_whatsapp || 'Sin instancia',
-        ultimo_mensaje: conv.ultimo_mensaje || 'Sin mensaje',
-        ultimo_mensaje_fecha: conv.ultimo_mensaje_fecha,
-        no_leidos: conv.no_leidos || 0,
-        leads: leadsMap.get(conv.lead_id) || {
-          nombre: 'Sin nombre',
-          pushname: 'Sin pushname',
-          numero_whatsapp: 'Sin número'
-        }
-      }));
-      
-      setConversations(typedConversations);
-    } catch (error: any) {
+      setConversations(data || []);
+    } catch (error) {
       console.error('Error loading conversations:', error);
-      toast({
-        title: "Error",
-        description: "Error al cargar las conversaciones",
-        variant: "destructive",
-      });
+      setError('Error de conexión');
+      setConversations([]);
     } finally {
       setLoading(false);
     }
@@ -94,112 +71,204 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
 
   useEffect(() => {
     loadConversations();
-  }, []);
+  }, [user]);
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.leads.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.leads.pushname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.leads.numero_whatsapp.includes(searchTerm)
-  );
+  // Suscripción en tiempo real
+  useEffect(() => {
+    if (!user) return;
 
-  const formatTime = (dateString: string) => {
+    const channel = supabase
+      .channel('conversaciones_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversaciones_whatsapp',
+        },
+        () => {
+          loadConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const filteredConversations = conversations.filter((conversation) => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      conversation.nombre_contacto?.toLowerCase().includes(searchLower) ||
+      conversation.pushname?.toLowerCase().includes(searchLower) ||
+      conversation.numero_whatsapp.includes(searchTerm) ||
+      conversation.ultimo_mensaje?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return '';
+    
     const date = new Date(dateString);
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) {
-      return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    } else if (days === 1) {
-      return 'Ayer';
-    } else if (days < 7) {
-      return date.toLocaleDateString('es-ES', { weekday: 'short' });
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor(diffInHours * 60);
+      return diffInMinutes <= 1 ? 'ahora' : `hace ${diffInMinutes}m`;
+    } else if (diffInHours < 24) {
+      return `hace ${Math.floor(diffInHours)}h`;
+    } else if (diffInHours < 48) {
+      return 'ayer';
     } else {
-      return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+      return date.toLocaleDateString('es-ES', { 
+        day: '2-digit', 
+        month: '2-digit' 
+      });
     }
   };
 
-  const getInitials = (name: string) => {
-    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??';
+  const getInitials = (name?: string, phone?: string) => {
+    if (name && name.trim()) {
+      return name
+        .trim()
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return phone ? phone.slice(-2) : '??';
+  };
+
+  const getDisplayName = (conversation: Conversation) => {
+    return conversation.pushname || 
+           conversation.nombre_contacto || 
+           conversation.numero_whatsapp;
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <MessageCircle className="h-6 w-6 animate-spin" />
-        <span className="ml-2">Cargando conversaciones...</span>
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="bg-gray-100 p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-semibold text-gray-800">Chats</h1>
+            <Button size="sm" variant="ghost" className="p-2">
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Buscar o empezar un chat nuevo"
+              className="pl-10 bg-white border-gray-300"
+              disabled
+            />
+          </div>
+        </div>
+
+        {/* Loading state */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-2"></div>
+            <p className="text-gray-500">Cargando conversaciones...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b bg-green-50">
-        <h2 className="text-xl font-semibold text-green-800 mb-3">Conversaciones</h2>
+    <div className="h-full flex flex-col bg-white">
+      {/* Header estilo WhatsApp */}
+      <div className="bg-gray-100 p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <h1 className="text-xl font-semibold text-gray-800">Chats</h1>
+          </div>
+          <Button size="sm" variant="ghost" className="p-2 hover:bg-gray-200">
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
+        
+        {/* Barra de búsqueda */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Buscar conversaciones..."
+            placeholder="Buscar o empezar un chat nuevo"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
           />
         </div>
       </div>
 
-      {/* Conversations List */}
+      {/* Lista de conversaciones */}
       <div className="flex-1 overflow-y-auto">
-        {filteredConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-            <MessageCircle className="h-12 w-12 mb-4 opacity-50" />
-            <p className="text-lg font-medium">No hay conversaciones</p>
-            <p className="text-sm">Las conversaciones aparecerán aquí cuando recibas mensajes</p>
+        {error ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 p-8">
+            <MessageCircle className="h-16 w-16 mb-4 opacity-30 text-red-400" />
+            <h3 className="text-lg font-medium mb-2 text-red-600">Error</h3>
+            <p className="text-center text-sm mb-4">{error}</p>
+            <Button onClick={loadConversations} variant="outline" size="sm">
+              Reintentar
+            </Button>
+          </div>
+        ) : filteredConversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 p-8">
+            <MessageCircle className="h-16 w-16 mb-4 opacity-30" />
+            <h3 className="text-lg font-medium mb-2">No hay conversaciones</h3>
+            <p className="text-center text-sm">
+              {searchTerm 
+                ? 'No se encontraron conversaciones que coincidan con tu búsqueda'
+                : 'Cuando tengas conversaciones de WhatsApp, aparecerán aquí'
+              }
+            </p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {filteredConversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                onClick={() => onSelectConversation(conversation)}
-                className={`p-3 cursor-pointer transition-colors border-b border-gray-100 hover:bg-gray-50 ${
-                  selectedConversationId === conversation.id ? 'bg-green-50 border-l-4 border-l-green-500' : ''
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-green-100 text-green-700">
-                      {getInitials(conversation.leads.nombre || conversation.leads.pushname)}
-                    </AvatarFallback>
-                  </Avatar>
+          filteredConversations.map((conversation) => (
+            <div
+              key={conversation.id}
+              onClick={() => onSelectConversation(conversation)}
+              className={`flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors ${
+                selectedConversationId === conversation.id ? 'bg-gray-100' : ''
+              }`}
+            >
+              {/* Avatar */}
+              <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-white font-medium mr-3 flex-shrink-0">
+                {getInitials(getDisplayName(conversation), conversation.numero_whatsapp)}
+              </div>
+
+              {/* Contenido de la conversación */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-medium text-gray-900 truncate">
+                    {getDisplayName(conversation)}
+                  </h3>
+                  <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                    {formatTime(conversation.ultimo_mensaje_fecha)}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-600 truncate">
+                    {conversation.ultimo_mensaje || 'Sin mensajes'}
+                  </p>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-medium text-gray-900 truncate">
-                        {conversation.leads.nombre || conversation.leads.pushname}
-                      </h3>
-                      <div className="flex items-center space-x-2">
-                        {conversation.no_leidos > 0 && (
-                          <Badge variant="default" className="bg-green-500 text-white">
-                            {conversation.no_leidos}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-gray-500">
-                          {conversation.ultimo_mensaje_fecha && formatTime(conversation.ultimo_mensaje_fecha)}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 truncate mt-1">
-                      {conversation.ultimo_mensaje}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {conversation.leads.numero_whatsapp}
-                    </p>
-                  </div>
+                  {/* Badge de mensajes no leídos */}
+                  {conversation.mensajes_no_leidos > 0 && (
+                    <span className="bg-green-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center flex-shrink-0 ml-2">
+                      {conversation.mensajes_no_leidos > 99 ? '99+' : conversation.mensajes_no_leidos}
+                    </span>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         )}
       </div>
     </div>

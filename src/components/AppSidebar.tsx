@@ -26,6 +26,7 @@ import {
   User,
   Phone,
   Users,
+  Database,
 } from 'lucide-react';
 
 const AppSidebar: React.FC = () => {

@@ -18,6 +18,7 @@ import AgentsMenuPage from "./pages/AgentsMenu";
 import WhatsAppConnectionPage from "./pages/WhatsAppConnection";
 import ConversationsPage from "./pages/Conversations";
 import LeadsPage from "./pages/Leads";
+import DatabaseViewerPage from "./pages/DatabaseViewer";
 
 import Chat from "./components/Chat";
 import NotFound from "./pages/NotFound";
@@ -253,6 +254,7 @@ const App = () => (
                 <Route path="/whatsapp" element={<WhatsAppConnectionPage />} />
                 <Route path="/conversaciones" element={<ConversationsPage />} />
                 <Route path="/leads" element={<LeadsPage />} />
+                <Route path="/database" element={<DatabaseViewerPage />} />
 
                 <Route path="/chat" element={<ChatPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -3,30 +3,34 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, Paperclip, Phone, Video } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-
-interface Message {
-  id: string;
-  mensaje: string;
-  direccion: 'enviado' | 'recibido';
-  tipo_mensaje: string;
-  url_adjunto?: string;
-  created_at: string;
-}
-
-interface Lead {
-  nombre: string;
-  pushname: string;
-  numero_whatsapp: string;
-}
+import { Send, Phone, Video, MoreVertical, Smile } from 'lucide-react';
 
 interface Conversation {
   id: string;
-  lead_id: string;
-  instancia_whatsapp: string;
-  leads: Lead;
+  instancia_id: string;
+  numero_whatsapp: string;
+  nombre_contacto?: string;
+  pushname?: string;
+  ultimo_mensaje?: string;
+  ultimo_mensaje_fecha?: string;
+  direccion_ultimo_mensaje?: string;
+  mensajes_no_leidos: number;
+  estado: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Message {
+  id: string;
+  conversacion_id: string;
+  nombre_instancia: string;
+  numero_telefono: string;
+  mensaje: string;
+  tipo_mensaje: string;
+  direccion: string;
+  leido: boolean;
+  mensaje_id_whatsapp: string;
+  created_at: string;
 }
 
 interface ChatWindowProps {
@@ -36,55 +40,45 @@ interface ChatWindowProps {
 const ChatWindow: React.FC<ChatWindowProps> = ({ conversation }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   const loadMessages = async () => {
-    if (!conversation) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
+      setLoading(true);
+      setError(null);
+      
+      // Consulta directa a la tabla mensajes_whatsapp
       const { data, error } = await supabase
         .from('mensajes_whatsapp')
         .select('*')
         .eq('conversacion_id', conversation.id)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      
-      const typedMessages: Message[] = (data || []).map(msg => ({
-        id: msg.id,
-        mensaje: msg.mensaje,
-        direccion: msg.direccion as 'enviado' | 'recibido',
-        tipo_mensaje: msg.tipo_mensaje,
-        url_adjunto: msg.url_adjunto,
-        created_at: msg.created_at
-      }));
-      
-      setMessages(typedMessages);
+      if (error) {
+        console.error('Error loading messages:', error);
+        setError('Error al cargar los mensajes');
+        setMessages([]);
+        return;
+      }
 
-      // Marcar mensajes como leídos
-      await supabase
-        .from('conversaciones_whatsapp')
-        .update({ no_leidos: 0 })
-        .eq('id', conversation.id);
-
-    } catch (error: any) {
+      setMessages(data || []);
+    } catch (error) {
       console.error('Error loading messages:', error);
-      toast({
-        title: "Error",
-        description: "Error al cargar los mensajes",
-        variant: "destructive",
-      });
+      setError('Error de conexión');
+      setMessages([]);
     } finally {
       setLoading(false);
     }
@@ -92,148 +86,234 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversation }) => {
 
   useEffect(() => {
     loadMessages();
-  }, [conversation]);
+  }, [conversation.id, user]);
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !user || sending) return;
+  // Suscripción en tiempo real
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('messages_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mensajes_whatsapp',
+          filter: `conversacion_id=eq.${conversation.id}`,
+        },
+        () => {
+          loadMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversation.id, user]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || sending) return;
 
     setSending(true);
     try {
-      const { error } = await supabase
-        .from('mensajes_whatsapp')
-        .insert({
-          user_id: user.id,
-          conversacion_id: conversation.id,
-          lead_id: conversation.lead_id,
-          instanca_nombre: conversation.instancia_whatsapp,
-          nombre: conversation.leads.nombre,
-          pushname: conversation.leads.pushname,
-          mensaje: newMessage,
-          direccion: 'enviado',
-          tipo_mensaje: 'text'
-        });
-
-      if (error) throw error;
-
+      // Aquí iría la lógica para enviar el mensaje a través de WhatsApp
+      // Por ahora solo limpiamos el input
       setNewMessage('');
-      await loadMessages();
-
-      toast({
-        title: "Mensaje enviado",
-        description: "Tu mensaje ha sido enviado correctamente",
-      });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error sending message:', error);
-      toast({
-        title: "Error",
-        description: "Error al enviar el mensaje",
-        variant: "destructive",
-      });
     } finally {
       setSending(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('es-ES', { 
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('es-ES', { 
       hour: '2-digit', 
-      minute: '2-digit' 
+      minute: '2-digit',
+      hour12: false 
     });
   };
 
-  const getInitials = (name: string) => {
-    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??';
+  const formatDate = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Hoy';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Ayer';
+    } else {
+      return date.toLocaleDateString('es-ES', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      });
+    }
   };
 
-  if (!conversation) {
+  const groupMessagesByDate = (messages: Message[]) => {
+    const groups: { [key: string]: Message[] } = {};
+    
+    messages.forEach(message => {
+      const date = new Date(message.created_at).toDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(message);
+    });
+    
+    return groups;
+  };
+
+  const getDisplayName = () => {
+    return conversation.pushname || 
+           conversation.nombre_contacto || 
+           conversation.numero_whatsapp;
+  };
+
+  const getInitials = () => {
+    const name = getDisplayName();
+    if (name && name !== conversation.numero_whatsapp) {
+      return name
+        .trim()
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return conversation.numero_whatsapp.slice(-2);
+  };
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500">
-        <div className="text-center">
-          <Send className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium">Selecciona una conversación</p>
-          <p className="text-sm">Elige una conversación para comenzar a chatear</p>
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="bg-gray-100 p-4 border-b border-gray-200">
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-medium mr-3">
+              {getInitials()}
+            </div>
+            <div className="flex-1">
+              <h2 className="font-medium text-gray-900">{getDisplayName()}</h2>
+              <p className="text-sm text-gray-500">Cargando...</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading state */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-2"></div>
+            <p className="text-gray-500">Cargando mensajes...</p>
+          </div>
         </div>
       </div>
     );
   }
 
+  const messageGroups = groupMessagesByDate(messages);
+
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-green-50">
-        <div className="flex items-center space-x-3">
-          <Avatar>
-            <AvatarFallback className="bg-green-100 text-green-700">
-              {getInitials(conversation.leads.nombre || conversation.leads.pushname)}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-semibold text-gray-900">
-              {conversation.leads.nombre || conversation.leads.pushname}
-            </h3>
-            <p className="text-sm text-gray-600">
-              {conversation.leads.numero_whatsapp}
-            </p>
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Header estilo WhatsApp */}
+      <div className="bg-gray-100 p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center">
+          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-medium mr-3">
+            {getInitials()}
+          </div>
+          <div className="flex-1">
+            <h2 className="font-medium text-gray-900">{getDisplayName()}</h2>
+            <div className="flex items-center">
+              <p className="text-sm text-gray-500">
+                {conversation.numero_whatsapp}
+              </p>
+            </div>
           </div>
         </div>
+        
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm">
-            <Phone className="h-4 w-4" />
+          <Button size="sm" variant="ghost" className="p-2 hover:bg-gray-200">
+            <Phone className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="sm">
-            <Video className="h-4 w-4" />
+          <Button size="sm" variant="ghost" className="p-2 hover:bg-gray-200">
+            <Video className="h-5 w-5" />
+          </Button>
+          <Button size="sm" variant="ghost" className="p-2 hover:bg-gray-200">
+            <MoreVertical className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-        {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <Send className="h-6 w-6 animate-spin" />
-            <span className="ml-2">Cargando mensajes...</span>
+      {/* Área de mensajes */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {error ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <p className="text-center text-sm mb-4">{error}</p>
+            <Button onClick={loadMessages} variant="outline" size="sm">
+              Reintentar
+            </Button>
           </div>
-        ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500 mt-8">
-            <p>No hay mensajes en esta conversación</p>
-            <p className="text-sm">Envía un mensaje para comenzar</p>
+        ) : Object.keys(messageGroups).length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <p className="text-center text-sm">
+              No hay mensajes en esta conversación
+            </p>
           </div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.direccion === 'enviado' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  message.direccion === 'enviado'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white text-gray-900 border'
-                }`}
-              >
-                <p className="text-sm">{message.mensaje}</p>
-                {message.url_adjunto && (
-                  <div className="mt-2">
-                    <img 
-                      src={message.url_adjunto} 
-                      alt="Adjunto" 
-                      className="max-w-full rounded"
-                    />
+          Object.entries(messageGroups).map(([date, dayMessages]) => (
+            <div key={date} className="space-y-2">
+              {/* Separador de fecha */}
+              <div className="flex justify-center">
+                <span className="bg-white px-3 py-1 rounded-full text-xs text-gray-500 shadow-sm">
+                  {formatDate(dayMessages[0].created_at)}
+                </span>
+              </div>
+
+              {/* Mensajes del día */}
+              <div className="space-y-2">
+                {dayMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.direccion === 'saliente' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        message.direccion === 'saliente'
+                          ? 'bg-green-500 text-white'
+                          : 'bg-white text-gray-900 shadow-sm'
+                      }`}
+                    >
+                      <p className="text-sm">{message.contenido}</p>
+                      <div className={`flex items-center justify-end mt-1 space-x-1 ${
+                        message.direccion === 'saliente' ? 'text-green-100' : 'text-gray-500'
+                      }`}>
+                        <span className="text-xs">
+                          {formatTime(message.created_at)}
+                        </span>
+                        {message.direccion === 'saliente' && (
+                          <div className="flex">
+                            <div className={`w-3 h-3 ${
+                              message.estado_mensaje === 'leido' ? 'text-blue-200' : 'text-green-200'
+                            }`}>
+                              ✓✓
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-                <p className={`text-xs mt-1 ${
-                  message.direccion === 'enviado' ? 'text-green-100' : 'text-gray-500'
-                }`}>
-                  {formatTime(message.created_at)}
-                </p>
+                ))}
               </div>
             </div>
           ))
@@ -241,28 +321,38 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversation }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className="p-4 border-t bg-white">
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm">
-            <Paperclip className="h-4 w-4" />
-          </Button>
-          <Input
-            placeholder="Escribe un mensaje..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={sending}
-            className="flex-1"
-          />
+      {/* Área de entrada de mensaje */}
+      <div className="bg-gray-100 p-4 border-t border-gray-200">
+        <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
           <Button 
-            onClick={sendMessage} 
-            disabled={!newMessage.trim() || sending}
-            className="bg-green-500 hover:bg-green-600"
+            type="button" 
+            size="sm" 
+            variant="ghost" 
+            className="p-2 hover:bg-gray-200"
+            disabled={usingMockData}
           >
-            <Send className="h-4 w-4" />
+            <Smile className="h-5 w-5" />
           </Button>
-        </div>
+          
+          <div className="flex-1 relative">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder={usingMockData ? "Modo demo - no se pueden enviar mensajes" : "Escribe un mensaje"}
+              className="pr-12 bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
+              disabled={sending || usingMockData}
+            />
+          </div>
+          
+          <Button 
+            type="submit" 
+            size="sm" 
+            disabled={!newMessage.trim() || sending || usingMockData}
+            className="bg-green-500 hover:bg-green-600 text-white p-2"
+          >
+            <Send className="h-5 w-5" />
+          </Button>
+        </form>
       </div>
     </div>
   );
