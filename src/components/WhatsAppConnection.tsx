@@ -75,7 +75,7 @@ const WhatsAppConnection: React.FC = () => {
 
       const webhookResult = await webhookResponse.json();
 
-      if (webhookResponse.ok && webhookResult.status === 'ok') {
+      if (webhookResponse.ok && (webhookResult.status === 'ok' || webhookResult.status === 'starting')) {
         // Si el webhook responde OK, guardar en la base de datos
         const { data: instancia, error: dbError } = await supabase
           .from('instancias_whatsapp')
