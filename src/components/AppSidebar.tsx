@@ -24,6 +24,7 @@ import {
   Settings,
   LogOut,
   User,
+  Phone,
 } from 'lucide-react';
 
 const AppSidebar: React.FC = () => {
@@ -46,6 +47,11 @@ const AppSidebar: React.FC = () => {
       title: 'Crear Agente',
       icon: Plus,
       path: '/agentes/nuevo',
+    },
+    {
+      title: 'WhatsApp',
+      icon: Phone,
+      path: '/whatsapp',
     },
   ];
 

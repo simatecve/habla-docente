@@ -15,6 +15,7 @@ import CreateAgentPage from "./pages/CreateAgent";
 import AgentDetail from "./pages/AgentDetail";
 import EditAgentPage from "./pages/EditAgent";
 import AgentsMenuPage from "./pages/AgentsMenu";
+import WhatsAppConnectionPage from "./pages/WhatsAppConnection";
 
 import Chat from "./components/Chat";
 import NotFound from "./pages/NotFound";
@@ -247,6 +248,7 @@ const App = () => (
                 <Route path="/agentes/nuevo" element={<CreateAgentPage />} />
                 <Route path="/agentes/:id" element={<AgentDetail />} />
                 <Route path="/agentes/:id/editar" element={<EditAgentPage />} />
+                <Route path="/whatsapp" element={<WhatsAppConnectionPage />} />
 
                 <Route path="/chat" element={<ChatPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
