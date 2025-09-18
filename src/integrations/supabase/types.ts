@@ -291,7 +291,7 @@ export type Database = {
       }
       mensajes_whatsapp: {
         Row: {
-          conversacion_id: string
+          conversacion_id: string | null
           created_at: string
           direccion: string
           id: string
@@ -307,7 +307,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          conversacion_id: string
+          conversacion_id?: string | null
           created_at?: string
           direccion: string
           id?: string
@@ -323,7 +323,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          conversacion_id?: string
+          conversacion_id?: string | null
           created_at?: string
           direccion?: string
           id?: string
