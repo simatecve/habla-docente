@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, QrCode, Phone } from 'lucide-react';
+import QRModal from './QRModal';
 
 const WhatsAppConnection: React.FC = () => {
   const { user } = useAuth();
@@ -14,6 +15,9 @@ const WhatsAppConnection: React.FC = () => {
   const [nombreInstancia, setNombreInstancia] = useState('');
   const [numeroWhatsapp, setNumeroWhatsapp] = useState('');
   const [instanciaCreada, setInstanciaCreada] = useState<any>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrCode, setQrCode] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const crearInstancia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,24 +139,103 @@ const WhatsAppConnection: React.FC = () => {
   };
 
   const conectarConQR = async () => {
-    if (!instanciaCreada) return;
+    if (!instanciaCreada || !user) return;
 
     setIsLoading(true);
     try {
-      // Aquí implementarías la lógica para obtener el código QR
-      toast({
-        title: "Función en desarrollo",
-        description: "La conexión por código QR estará disponible pronto",
+      // Obtener datos del perfil del usuario
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        throw new Error('Error al obtener datos del perfil');
+      }
+
+      // Datos para enviar al webhook del QR
+      const webhookData = {
+        usuario: {
+          id: user.id,
+          email: user.email,
+          nombre: profile?.nombre || 'Usuario',
+          plan: profile?.plan || 'freemium'
+        },
+        instancia: {
+          nombre_instancia: instanciaCreada.nombre_instancia,
+          numero_whatsapp: instanciaCreada.numero_whatsapp
+        }
+      };
+
+      // Llamar al webhook del QR
+      const webhookResponse = await fetch('https://n8n.kanbanpro.com.ar/webhook/qr_instancia', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookData),
       });
-    } catch (error) {
+
+      const webhookText = await webhookResponse.text();
+      let webhookResult: any;
+      try {
+        webhookResult = JSON.parse(webhookText);
+      } catch {
+        webhookResult = webhookText;
+      }
+
+      if (webhookResponse.ok && webhookResult) {
+        // Asumir que la respuesta contiene el código QR
+        setQrCode(webhookResult.qrCode || webhookResult);
+        setShowQRModal(true);
+      } else {
+        throw new Error('Error al obtener el código QR');
+      }
+    } catch (error: any) {
       console.error('Error:', error);
       toast({
         title: "Error",
-        description: "Error al conectar con código QR",
+        description: error.message || "Error al obtener el código QR",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const confirmarConexion = async () => {
+    if (!instanciaCreada) return;
+
+    setIsConfirming(true);
+    try {
+      // Actualizar el estado de la instancia a "conectado"
+      const { error: updateError } = await supabase
+        .from('instancias_whatsapp')
+        .update({ estado: 'conectado' })
+        .eq('id', instanciaCreada.id);
+
+      if (updateError) {
+        throw new Error('Error al actualizar el estado de la instancia');
+      }
+
+      // Actualizar el estado local
+      setInstanciaCreada({ ...instanciaCreada, estado: 'conectado' });
+      setShowQRModal(false);
+      
+      toast({
+        title: "¡Éxito!",
+        description: "WhatsApp conectado correctamente",
+      });
+    } catch (error: any) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al confirmar la conexión",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -220,15 +303,17 @@ const WhatsAppConnection: React.FC = () => {
 
               <Button 
                 onClick={conectarConQR} 
-                disabled={isLoading}
+                disabled={isLoading || instanciaCreada.estado === 'conectado'}
                 className="w-full"
                 variant="default"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Conectando...
+                    Obteniendo QR...
                   </>
+                ) : instanciaCreada.estado === 'conectado' ? (
+                  'WhatsApp Conectado'
                 ) : (
                   <>
                     <QrCode className="mr-2 h-4 w-4" />
@@ -240,6 +325,14 @@ const WhatsAppConnection: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <QRModal
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        qrCode={qrCode}
+        onConfirmConnection={confirmarConexion}
+        isConfirming={isConfirming}
+      />
     </div>
   );
 };
