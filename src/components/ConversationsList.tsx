@@ -42,35 +42,45 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // Primero obtener las conversaciones
+      const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversaciones_whatsapp')
-        .select(`
-          id,
-          lead_id,
-          instancia_whatsapp,
-          ultimo_mensaje,
-          ultimo_mensaje_fecha,
-          no_leidos,
-          leads!inner (
-            nombre,
-            pushname,
-            numero_whatsapp
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .order('ultimo_mensaje_fecha', { ascending: false });
 
-      if (error) throw error;
+      if (conversationsError) throw conversationsError;
+
+      if (!conversationsData || conversationsData.length === 0) {
+        setConversations([]);
+        return;
+      }
+
+      // Obtener los IDs de leads únicos
+      const leadIds = [...new Set(conversationsData.map(conv => conv.lead_id).filter(Boolean))];
       
-      const typedConversations: Conversation[] = (data || []).map(conv => ({
-        id: conv.id,
-        lead_id: conv.lead_id,
-        instancia_whatsapp: conv.instancia_whatsapp,
-        ultimo_mensaje: conv.ultimo_mensaje,
-        ultimo_mensaje_fecha: conv.ultimo_mensaje_fecha,
-        no_leidos: conv.no_leidos,
-        leads: Array.isArray(conv.leads) ? conv.leads[0] : conv.leads
-      }));
+      // Obtener la información de los leads
+      const { data: leadsData, error: leadsError } = await supabase
+        .from('leads')
+        .select('*')
+        .in('id', leadIds);
+
+      if (leadsError) throw leadsError;
+
+      // Combinar los datos
+      const leadsMap = new Map((leadsData || []).map(lead => [lead.id, lead]));
+      
+      const typedConversations: Conversation[] = conversationsData
+        .filter(conv => leadsMap.has(conv.lead_id))
+        .map(conv => ({
+          id: conv.id,
+          lead_id: conv.lead_id,
+          instancia_whatsapp: conv.instancia_whatsapp,
+          ultimo_mensaje: conv.ultimo_mensaje,
+          ultimo_mensaje_fecha: conv.ultimo_mensaje_fecha,
+          no_leidos: conv.no_leidos,
+          leads: leadsMap.get(conv.lead_id)!
+        }));
       
       setConversations(typedConversations);
     } catch (error: any) {
