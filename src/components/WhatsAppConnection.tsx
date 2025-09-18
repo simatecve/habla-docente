@@ -209,7 +209,7 @@ const WhatsAppConnection: React.FC = () => {
       };
 
       // Llamar al webhook del QR
-      const webhookResponse = await fetch('https://n8n.kanbanpro.com.ar/webhook/qr_instancia', {
+      const webhookResponse = await fetch('https://app-zuenvio.aykjp9.easypanel.host/webhook/qr_instancia', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
