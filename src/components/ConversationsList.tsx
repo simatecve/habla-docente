@@ -39,14 +39,13 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
 
   const loadConversations = async () => {
-    if (!user) return;
+    // Remover filtro de usuario
 
     try {
-      // Primero obtener las conversaciones
+      // Obtener todas las conversaciones sin filtro de usuario
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversaciones_whatsapp')
         .select('*')
-        .eq('user_id', user.id)
         .order('ultimo_mensaje_fecha', { ascending: false });
 
       if (conversationsError) throw conversationsError;
@@ -56,31 +55,29 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
         return;
       }
 
-      // Obtener los IDs de leads únicos
-      const leadIds = [...new Set(conversationsData.map(conv => conv.lead_id).filter(Boolean))];
-      
-      // Obtener la información de los leads
+      // Obtener todos los leads sin filtro de usuario
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
-        .select('*')
-        .in('id', leadIds);
+        .select('*');
 
       if (leadsError) throw leadsError;
 
       // Combinar los datos
       const leadsMap = new Map((leadsData || []).map(lead => [lead.id, lead]));
       
-      const typedConversations: Conversation[] = conversationsData
-        .filter(conv => leadsMap.has(conv.lead_id))
-        .map(conv => ({
-          id: conv.id,
-          lead_id: conv.lead_id,
-          instancia_whatsapp: conv.instancia_whatsapp,
-          ultimo_mensaje: conv.ultimo_mensaje,
-          ultimo_mensaje_fecha: conv.ultimo_mensaje_fecha,
-          no_leidos: conv.no_leidos,
-          leads: leadsMap.get(conv.lead_id)!
-        }));
+      const typedConversations: Conversation[] = conversationsData.map(conv => ({
+        id: conv.id,
+        lead_id: conv.lead_id,
+        instancia_whatsapp: conv.instancia_whatsapp || 'Sin instancia',
+        ultimo_mensaje: conv.ultimo_mensaje || 'Sin mensaje',
+        ultimo_mensaje_fecha: conv.ultimo_mensaje_fecha,
+        no_leidos: conv.no_leidos || 0,
+        leads: leadsMap.get(conv.lead_id) || {
+          nombre: 'Sin nombre',
+          pushname: 'Sin pushname',
+          numero_whatsapp: 'Sin número'
+        }
+      }));
       
       setConversations(typedConversations);
     } catch (error: any) {
@@ -97,7 +94,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
 
   useEffect(() => {
     loadConversations();
-  }, [user]);
+  }, []);
 
   const filteredConversations = conversations.filter(conv =>
     conv.leads.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||

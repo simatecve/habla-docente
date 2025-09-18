@@ -50,7 +50,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversation }) => {
   }, [messages]);
 
   const loadMessages = async () => {
-    if (!user || !conversation) return;
+    if (!conversation) return;
 
     try {
       const { data, error } = await supabase
@@ -92,7 +92,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversation }) => {
 
   useEffect(() => {
     loadMessages();
-  }, [conversation, user]);
+  }, [conversation]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !user || sending) return;

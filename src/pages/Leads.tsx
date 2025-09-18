@@ -32,13 +32,12 @@ const LeadsPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
 
   const loadLeads = async () => {
-    if (!user) return;
+    // Cargar todos los leads sin filtro de usuario
 
     try {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -57,7 +56,7 @@ const LeadsPage: React.FC = () => {
 
   useEffect(() => {
     loadLeads();
-  }, [user]);
+  }, []);
 
   const createLead = async () => {
     if (!user || !newLead.numero_whatsapp.trim()) return;
